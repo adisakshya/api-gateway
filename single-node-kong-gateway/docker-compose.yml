@@ -62,6 +62,11 @@ services:
     networks:
       - kong-net
     restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong -d kong"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # Kong database migration
   kong-migrations:
@@ -78,7 +83,8 @@ services:
     networks:
       - kong-net
     depends_on:
-      - kong-database
+      kong-database:
+        condition: service_healthy
 
   # Kong: The API Gateway
   kong:
@@ -108,7 +114,10 @@ services:
     networks:
       - kong-net
     depends_on:
-      - kong-migrations
+      kong-database:
+        condition: service_healthy
+      kong-migrations:
+        condition: service_completed_successfully
 
   # Konga: Kong GUI
   konga:
